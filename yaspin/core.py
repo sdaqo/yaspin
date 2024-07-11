@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import functools
 import itertools
+import shutil
 import signal
 import sys
 import threading
@@ -108,6 +109,7 @@ class Yaspin:  # pylint: disable=too-many-instance-attributes
         side: str = "left",
         sigmap: Optional[dict[signal.Signals, SignalHandlers]] = None,
         timer: bool = False,
+        ellipsis: str = "",
     ) -> None:
         # Spinner
         self._spinner = self._set_spinner(spinner)
@@ -126,6 +128,7 @@ class Yaspin:  # pylint: disable=too-many-instance-attributes
         self._side = self._set_side(side)
         self._reversal = reversal
         self._timer = timer
+        self._ellipsis = ellipsis
         self._start_time: Optional[float] = None
         self._stop_time: Optional[float] = None
 
@@ -254,6 +257,14 @@ class Yaspin:  # pylint: disable=too-many-instance-attributes
     @side.setter
     def side(self, value: str) -> None:
         self._side = self._set_side(value)
+
+    @property
+    def ellipsis(self) -> str:
+        return self._ellipsis
+
+    @ellipsis.setter
+    def ellipsis(self, value: str) -> None:
+        self._ellipsis = value
 
     @property
     def reversal(self) -> bool:
@@ -435,6 +446,16 @@ class Yaspin:  # pylint: disable=too-many-instance-attributes
 
     def _compose_out(self, frame: str, mode: Optional[str] = None) -> str:
         text = str(self._text)
+
+        term_width = shutil.get_terminal_size()[0]
+
+        # Width - (Frame + Space) - (Timer + Space) - Ellipsis
+        max_text_len = term_width - (len(frame) + 1)
+        max_text_len = max_text_len - (0 if not self._timer else 12 + 1)
+        max_text_len = max_text_len - len(self._ellipsis)
+
+        # Truncate
+        text = text[:max_text_len] + self._ellipsis if len(text) > max_text_len else text
 
         # Colors
         if self._color_func is not None:
